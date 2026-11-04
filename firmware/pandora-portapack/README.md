@@ -38,6 +38,20 @@ cd mayhem-mdk/src/uart
 ./build.sh
 ```
 
+The repository supports firmware as Intel HEX streamed to its original UART
+frontend, and documents `firmware.bin` as an optional flat-image fallback. This
+overlay does not implement that UART loader and does not claim the repository's
+binary is the correct Pandora image. Before building, place a firmware image
+that you have verified and are authorized to use at:
+
+```text
+mayhem-mdk/src/portapack-external-module/main/firmware.bin
+```
+
+The overlay passes that flat image to `emu_init`; it does not accept Intel HEX
+directly or verify firmware provenance. CMake stops with an explicit error if
+the file is missing.
+
 Then build the external module using the ESP-IDF version supported by the
 checked-out Mayhem MDK revision:
 
@@ -51,6 +65,10 @@ idf.py -p PORT flash monitor
 The app appears as **Pandora View** in Utilities. It requests the 1472-byte
 frame in 124-byte I2C chunks and draws it as RGB565 pixels. No UART loopback is
 needed.
+
+The emulator task and read-only framebuffer transport are separate source
+modules. Their only shared interface publishes framebuffer bytes; no radio
+adapter or RF-specific extension API is included.
 
 ## Scope and limits
 

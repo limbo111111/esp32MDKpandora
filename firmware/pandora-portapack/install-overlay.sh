@@ -37,10 +37,6 @@ if ! git -C "$MAYHEM_DIR" diff --quiet HEAD -- "${required_files[@]}"; then
     exit 1
 fi
 
-if [[ -e "$MAYHEM_DIR/src/portapack-external-module/main/firmware.bin" ]]; then
-    echo "The target already has main/firmware.bin; refusing to replace it." >&2
-    exit 1
-fi
 if [[ -e "$MAYHEM_DIR/components/thumbcore" ]]; then
     echo "The target already has components/thumbcore; refusing to replace it." >&2
     exit 1
@@ -57,6 +53,10 @@ cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/CMakeLists.txt" \
     "$MAYHEM_DIR/src/portapack-external-module/main/CMakeLists.txt"
 cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/main.cpp" \
     "$MAYHEM_DIR/src/portapack-external-module/main/main.cpp"
+cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/pandora_display_link.cpp" \
+    "$MAYHEM_DIR/src/portapack-external-module/main/pandora_display_link.cpp"
+cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/pandora_display_link.hpp" \
+    "$MAYHEM_DIR/src/portapack-external-module/main/pandora_display_link.hpp"
 
 cp "$SCRIPT_DIR/overlay/src/uart/uart.cpp" "$MAYHEM_DIR/src/uart/uart.cpp"
 cp "$SCRIPT_DIR/overlay/src/uart/uart.hpp" "$MAYHEM_DIR/src/uart/uart.hpp"
@@ -71,12 +71,11 @@ cp "$SCRIPT_DIR/upstream/main/emulator.h" \
     "$MAYHEM_DIR/src/portapack-external-module/main/pandora/emulator.h"
 cp "$SCRIPT_DIR/upstream/main/protocol.h" \
     "$MAYHEM_DIR/src/portapack-external-module/main/pandora/protocol.h"
-cp "$SCRIPT_DIR/upstream/main/firmware.bin" \
-    "$MAYHEM_DIR/src/portapack-external-module/main/firmware.bin"
 mkdir -p "$MAYHEM_DIR/components/thumbcore"
 cp -R "$SCRIPT_DIR/upstream/components/thumbcore/." \
     "$MAYHEM_DIR/components/thumbcore/"
 
 echo "Display-only overlay installed."
 echo "The emulator task does not expose button input or an RF bridge."
+echo "Provide your verified flat firmware image as main/firmware.bin before building."
 echo "Build the Pandora View app first, then build the ESP32-S3 module; see README.md."
