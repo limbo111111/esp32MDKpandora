@@ -14,9 +14,6 @@ required_files=(
     "src/portapack-external-module/CMakeLists.txt"
     "src/portapack-external-module/main/CMakeLists.txt"
     "src/portapack-external-module/main/main.cpp"
-    "src/uart/uart.cpp"
-    "src/uart/uart.hpp"
-    "src/uart/standalone_application_entry.cpp"
 )
 
 for file in "${required_files[@]}"; do
@@ -62,10 +59,6 @@ cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/display_test_pattern.
 cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/display_test_pattern.hpp" \
     "$MAYHEM_DIR/src/portapack-external-module/main/display_test_pattern.hpp"
 
-cp "$SCRIPT_DIR/overlay/src/uart/uart.cpp" "$MAYHEM_DIR/src/uart/uart.cpp"
-cp "$SCRIPT_DIR/overlay/src/uart/uart.hpp" "$MAYHEM_DIR/src/uart/uart.hpp"
-cp "$SCRIPT_DIR/overlay/src/uart/standalone_application_entry.cpp" \
-    "$MAYHEM_DIR/src/uart/standalone_application_entry.cpp"
 cp "$SCRIPT_DIR/protocol/pandora_display_protocol.h" \
     "$MAYHEM_DIR/src/common/pandora_display_protocol.h"
 
@@ -79,7 +72,7 @@ mkdir -p "$MAYHEM_DIR/components/thumbcore"
 cp -R "$SCRIPT_DIR/upstream/components/thumbcore/." \
     "$MAYHEM_DIR/components/thumbcore/"
 
-echo "Display-only overlay installed."
-echo "The emulator task does not expose button input or an RF bridge."
+echo "Overlay with RF integration installed."
+echo "The emulator task now supports button inputs and a TX/RX RF bridge."
 echo "Provide your verified flat firmware image as main/firmware.bin before building."
 echo "Build the Pandora View app first, then build the ESP32-S3 module; see README.md."

@@ -4,11 +4,13 @@
 #include <stdint.h>
 
 /*
- * Read-only framebuffer transfer between the ESP32-MDK module and its
- * PortaPack standalone app. This protocol has no input or radio commands.
+ * Display and peripheral commands between the ESP32-MDK module and PortaPack.
  */
 #define PANDORA_DISPLAY_META_COMMAND 0x7F20u
 #define PANDORA_DISPLAY_FRAME_COMMAND 0x7F21u
+#define PANDORA_DISPLAY_BUTTON_COMMAND 0x7F22u
+#define PANDORA_DISPLAY_TX_EDGE_COMMAND 0x7F23u
+#define PANDORA_DISPLAY_RX_EDGE_COMMAND 0x7F24u
 
 #define PANDORA_DISPLAY_FRAME_BYTES 1472u
 #define PANDORA_DISPLAY_RESPONSE_BYTES 128u

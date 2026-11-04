@@ -8,7 +8,7 @@
 #include "pandora_display_protocol.h"
 #include "pandora_display_link.hpp"
 #include "ppi2c/pp_handler.hpp"
-#include "uart_app.h"
+
 
 #if defined(PANDORA_DISPLAY_TEST_PATTERN)
 #include "display_test_pattern.hpp"
@@ -32,8 +32,7 @@ constexpr gpio_num_t kMdkI2cFirstPin = GPIO_NUM_6;
 constexpr gpio_num_t kMdkI2cSecondPin = GPIO_NUM_5;
 constexpr uint8_t kI2cSlaveAddress = 0x51;
 
-static_assert(sizeof(uart_app) % 32 == 0,
-              "standalone app size must be a multiple of 32 bytes");
+
 #if !defined(PANDORA_DISPLAY_TEST_PATTERN)
 constexpr uint32_t kInstructionsPerSlice = 120000;
 constexpr uint32_t kEmulatorTaskStackBytes = 8192;
@@ -94,12 +93,13 @@ static const char* kTag = "pandora-display";
 extern "C" void app_main(void) {
     PPHandler::set_module_name("PANDORA-DISPLAY");
     PPHandler::set_module_version(1);
-    if (!PPHandler::add_app(uart_app, sizeof(uart_app))) {
-        ESP_LOGE(kTag, "could not register the PortaPack display app");
-        return;
-    }
 
-    pandora_display_link_init();
+#if defined(PANDORA_DISPLAY_TEST_PATTERN)
+    pandora_display_link_init(nullptr);
+#else
+    pandora_display_link_init(&g_emulator);
+#endif
+
     PPHandler::init(kMdkI2cFirstPin, kMdkI2cSecondPin, kI2cSlaveAddress);
 
 #if defined(PANDORA_DISPLAY_TEST_PATTERN)
