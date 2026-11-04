@@ -57,6 +57,10 @@ cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/pandora_display_link.
     "$MAYHEM_DIR/src/portapack-external-module/main/pandora_display_link.cpp"
 cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/pandora_display_link.hpp" \
     "$MAYHEM_DIR/src/portapack-external-module/main/pandora_display_link.hpp"
+cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/display_test_pattern.cpp" \
+    "$MAYHEM_DIR/src/portapack-external-module/main/display_test_pattern.cpp"
+cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/display_test_pattern.hpp" \
+    "$MAYHEM_DIR/src/portapack-external-module/main/display_test_pattern.hpp"
 
 cp "$SCRIPT_DIR/overlay/src/uart/uart.cpp" "$MAYHEM_DIR/src/uart/uart.cpp"
 cp "$SCRIPT_DIR/overlay/src/uart/uart.hpp" "$MAYHEM_DIR/src/uart/uart.hpp"

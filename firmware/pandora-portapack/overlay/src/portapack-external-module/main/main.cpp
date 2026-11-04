@@ -10,6 +10,9 @@
 #include "ppi2c/pp_handler.hpp"
 #include "uart_app.h"
 
+#if defined(PANDORA_DISPLAY_TEST_PATTERN)
+#include "display_test_pattern.hpp"
+#else
 extern "C" {
 #include "emulator.h"
 }
@@ -20,6 +23,7 @@ extern const uint8_t pandora_firmware_start[]
 extern const uint8_t pandora_firmware_end[]
     asm("_binary_firmware_bin_end");
 }
+#endif
 
 namespace {
 
@@ -27,18 +31,19 @@ namespace {
 constexpr gpio_num_t kMdkI2cFirstPin = GPIO_NUM_6;
 constexpr gpio_num_t kMdkI2cSecondPin = GPIO_NUM_5;
 constexpr uint8_t kI2cSlaveAddress = 0x51;
+
+static_assert(sizeof(uart_app) % 32 == 0,
+              "standalone app size must be a multiple of 32 bytes");
+#if !defined(PANDORA_DISPLAY_TEST_PATTERN)
 constexpr uint32_t kInstructionsPerSlice = 120000;
 constexpr uint32_t kEmulatorTaskStackBytes = 8192;
 constexpr uint8_t kAppCore = 1;
 
-static_assert(sizeof(uart_app) % 32 == 0,
-              "standalone app size must be a multiple of 32 bytes");
 static_assert(OLED_FB_SIZE == PANDORA_DISPLAY_FRAME_BYTES,
               "display protocol must match the emulator framebuffer");
 static_assert(OLED_COLS == PANDORA_DISPLAY_COLUMNS,
               "display protocol must match the emulator column stride");
 
-static const char* kTag = "pandora-display";
 static EmuState g_emulator{};
 
 void publish_framebuffer() {
@@ -80,6 +85,9 @@ void emulator_task(void*) {
         vTaskDelay(1);
     }
 }
+#endif
+
+static const char* kTag = "pandora-display";
 
 }  // namespace
 
@@ -94,10 +102,14 @@ extern "C" void app_main(void) {
     pandora_display_link_init();
     PPHandler::init(kMdkI2cFirstPin, kMdkI2cSecondPin, kI2cSlaveAddress);
 
+#if defined(PANDORA_DISPLAY_TEST_PATTERN)
+    display_test_pattern_start();
+#else
     const BaseType_t taskResult = xTaskCreatePinnedToCore(
         emulator_task, "pandora_display", kEmulatorTaskStackBytes, nullptr,
         5, nullptr, kAppCore);
     if (taskResult != pdPASS) {
         ESP_LOGE(kTag, "could not start the emulator task");
     }
+#endif
 }

@@ -38,21 +38,30 @@ cd mayhem-mdk/src/uart
 ./build.sh
 ```
 
-The repository supports firmware as Intel HEX streamed to its original UART
-frontend, and documents `firmware.bin` as an optional flat-image fallback. This
-overlay does not implement that UART loader and does not claim the repository's
-binary is the correct Pandora image. Before building, place a firmware image
-that you have verified and are authorized to use at:
+### Check the display without Pandora firmware
 
-```text
-mayhem-mdk/src/portapack-external-module/main/firmware.bin
+The synthetic test mode does not compile the emulator, read a firmware image,
+or add RF behavior. It draws four grayscale bars, a border, and a moving marker:
+
+```sh
+cd mayhem-mdk/src/portapack-external-module
+idf.py build -DPANDORA_DISPLAY_TEST_PATTERN=1
 ```
 
-The overlay passes that flat image to `emu_init`; it does not accept Intel HEX
-directly or verify firmware provenance. CMake stops with an explicit error if
-the file is missing.
+Flash that build and open **Pandora View** in Utilities to check the display
+transport and pixel mapping.
 
-Then build the external module using the ESP-IDF version supported by the
+### Run the emulator (separate from the display test)
+
+The upstream repository documents Intel HEX input over its original UART
+frontend, plus an optional embedded flat-image fallback. This overlay does not
+implement that UART loader or verify firmware provenance. For normal emulator
+mode, place a firmware image you have verified and are authorized to use at
+`mayhem-mdk/src/portapack-external-module/main/firmware.bin`. The overlay passes
+that flat image to `emu_init`; it does not accept Intel HEX directly. CMake
+fails explicitly if the image is missing.
+
+Build the external module using the ESP-IDF version supported by the
 checked-out Mayhem MDK revision:
 
 ```sh
