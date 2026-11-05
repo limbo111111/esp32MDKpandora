@@ -59,7 +59,7 @@ void emulator_task(void*) {
         firmwareSize);
 
     if (initResult != 0) {
-        ESP_LOGE(kTag, "emulator initialization failed: %d", initResult);
+        ESP_LOGE("pandora", "emulator initialization failed: %d", initResult);
         vTaskDelete(nullptr);
         return;
     }
@@ -73,7 +73,7 @@ void emulator_task(void*) {
     publish_framebuffer();
 
     uint32_t lastOledFrame = g_emulator.oled_frames;
-    ESP_LOGI(kTag, "emulator ready; RF bridge active");
+    ESP_LOGI("pandora", "emulator ready; RF bridge active");
 
     for (;;) {
         emu_run_burst(&g_emulator, kInstructionsPerSlice);
@@ -86,7 +86,8 @@ void emulator_task(void*) {
 }
 #endif
 
-static const char* kTag = "pandora-display";
+static constexpr const char* TAG = "pandora-display";
+#define kTag TAG
 
 }  // namespace
 
@@ -109,7 +110,7 @@ extern "C" void app_main(void) {
         emulator_task, "pandora_display", kEmulatorTaskStackBytes, nullptr,
         5, nullptr, kAppCore);
     if (taskResult != pdPASS) {
-        ESP_LOGE(kTag, "could not start the emulator task");
+        ESP_LOGE("pandora", "could not start the emulator task");
     }
 #endif
 }
