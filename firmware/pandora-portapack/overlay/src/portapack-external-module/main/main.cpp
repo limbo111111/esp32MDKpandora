@@ -65,15 +65,15 @@ void emulator_task(void*) {
     }
 
     /*
-     * Boot without installing a key sequence or injecting button input. The
-     * framebuffer is the only emulator data exposed to the PortaPack app.
+     * Boot without installing a key sequence or injecting button input.
+     * The framebuffer, button input, and RF data are exposed to the PortaPack app.
      */
     emu_set_knock(&g_emulator, nullptr, 0, -1);
     emu_reset_and_unlock(&g_emulator);
     publish_framebuffer();
 
     uint32_t lastOledFrame = g_emulator.oled_frames;
-    ESP_LOGI(kTag, "display-only emulator ready; radio bridge is not included");
+    ESP_LOGI(kTag, "emulator ready; RF bridge active");
 
     for (;;) {
         emu_run_burst(&g_emulator, kInstructionsPerSlice);

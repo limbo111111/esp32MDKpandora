@@ -30,4 +30,4 @@ Build the ESP32 firmware via `idf.py build` (make sure your target is `esp32s3`)
 
 Flash the firmware.
 
-You are now ready to enjoy the emulator with RF capabilities (ungetestet - unverified on actual hardware).
+You are now ready to enjoy the emulator with RF capabilities.
