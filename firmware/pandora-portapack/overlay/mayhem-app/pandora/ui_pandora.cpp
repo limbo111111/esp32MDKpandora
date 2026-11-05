@@ -73,7 +73,7 @@ void PandoraAppView::on_timer() {
     if (tx_active_) {
         systime_t now = chVTGetSystemTime();
         // Wait until elapsed
-        if (now >= tx_end_time_ms_) {
+        if ((systime_t)(now - tx_start_time_) >= tx_duration_) {
             transmitter_model.disable();
             baseband::shutdown();
             baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
@@ -278,7 +278,8 @@ void PandoraAppView::process_tx_edges() {
         // Async transmission wait
         tx_active_ = true;
         uint32_t wait_ms = (bitstream_length * symbol_duration_us) / 1000 + 10;
-        tx_end_time_ms_ = chVTGetSystemTime() + chTimeMS2I(wait_ms);
+        tx_start_time_ = chVTGetSystemTime();
+        tx_duration_ = chTimeMS2I(wait_ms);
     }
 }
 
