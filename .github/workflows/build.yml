@@ -88,7 +88,7 @@ jobs:
       - name: Run Install Overlay Script and fix mayhem-mdk bugs
         run: |
           cd firmware/pandora-portapack
-          ./install-overlay.sh ../../mayhem-mdk
+          bash ./install-overlay.sh ../../mayhem-mdk
 
           # Fix upstream API deprecations for ESP-IDF v5.3.1 compatibility
           sed -i 's/soc\/gpio_num.h/hal\/gpio_types.h/' ../../mayhem-mdk/src/portapack-external-module/main/ppi2c/i2c_slave_driver.h
