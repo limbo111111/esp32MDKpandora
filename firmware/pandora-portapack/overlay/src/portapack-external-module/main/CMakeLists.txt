@@ -34,7 +34,8 @@ set(component_args
         "./ppi2c"
         "./pandora"
         "../../common"
-        "../../uart/build"
+
+
     REQUIRES ${component_requires}
 )
 
