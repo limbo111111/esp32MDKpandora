@@ -1,0 +1,45 @@
+--- a/firmware/common/message.hpp
++++ b/firmware/common/message.hpp
+@@ -69,6 +69,7 @@
+         TPMSPacket = 6,
+         ACARSPacket = 7,
+         AISPacket = 8,
++        SubGhzRawEdge = 250,
+         ERTPacket = 9,
+         SondePacket = 10,
+@@ -582,6 +583,16 @@
+     const uint32_t value;
+ };
+
++class SubGhzRawEdgeMessage : public Message {
++   public:
++    constexpr SubGhzRawEdgeMessage(
++        bool level,
++        uint32_t duration)
++        : Message(Message::ID::SubGhzRawEdge),
++          level(level),
++          duration(duration) {
++    }
++
++    const bool level;
++    const uint32_t duration;
++};
++
+ class AFSKDataMessage : public Message {
+--- a/firmware/baseband/proc_subghzd.cpp
++++ b/firmware/baseband/proc_subghzd.cpp
+@@ -45,6 +45,10 @@
+         {
+             currentDuration += nsPerDecSamp;
+         } else {  // called on change, so send the last duration and dir.
+             if (currentDuration >= 30'000'000) sig_state = STATE_IDLE;
+             if (protoList) protoList->feed(currentHiLow, currentDuration / 1000);
++
++            if (currentDuration / 1000 >= 50) { // Filter out microscopic noise before queue
++                SubGhzRawEdgeMessage message{currentHiLow, currentDuration / 1000};
++                shared_memory.application_queue.push(message);
++            }
++
+             currentDuration = nsPerDecSamp;
+             currentHiLow = meashl;
+         }
