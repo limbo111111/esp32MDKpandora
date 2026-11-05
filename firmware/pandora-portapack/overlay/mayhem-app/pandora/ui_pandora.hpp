@@ -46,7 +46,8 @@ private:
     bool transfer_active_ = false;
 
     bool tx_active_ = false;
-    uint32_t tx_end_time_ms_ = 0;
+    systime_t tx_start_time_ = 0;
+    systime_t tx_duration_ = 0;
     uint32_t current_rf_freq_ = 433920000;
     uint8_t current_rf_mode_ = 0; // 0 = idle, 1 = ready, 2 = rx, 3 = tx
 
