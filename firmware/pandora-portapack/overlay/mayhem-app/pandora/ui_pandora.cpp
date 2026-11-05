@@ -37,7 +37,7 @@ PandoraAppView::PandoraAppView(ui::NavigationView& nav) : nav_{nav} {
 
     // Configure RX Baseband Processor for receiving raw edges
     // Found at: firmware/application/baseband_api.cpp:241
-        baseband::run_image(portapack::spi_flash::image_tag_am_audio);
+        baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
     // Found at: firmware/application/receiver_model.cpp:157
     receiver_model.set_sampling_rate(3072000);
     // Found at: firmware/application/receiver_model.cpp:164
@@ -67,6 +67,22 @@ void PandoraAppView::on_hide() {
 void PandoraAppView::on_timer() {
     if (!is_connected()) return;
 
+    // Poll current RF frequency and mode
+    poll_rf_config();
+
+    if (tx_active_) {
+        systime_t now = chVTGetSystemTime();
+        // Wait until elapsed
+        if (now >= tx_end_time_ms_) {
+            transmitter_model.disable();
+            baseband::shutdown();
+            baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
+            receiver_model.enable();
+            tx_active_ = false;
+        }
+        return; // Skip framebuffer updates while transmitting to save CPU
+    }
+
     if (!transfer_active_) {
         if (++poll_frames_ < 6) {
             return;
@@ -86,7 +102,9 @@ void PandoraAppView::on_timer() {
     read_next_chunk();
 
     // Check for TX edges and forward RX edges
-    process_tx_edges();
+    if (!tx_active_) {
+        process_tx_edges();
+    }
 }
 
 bool PandoraAppView::on_key(const ui::KeyEvent event) {
@@ -100,6 +118,8 @@ bool PandoraAppView::on_key(const ui::KeyEvent event) {
     if (event == ui::KeyEvent::Select) btn_mask |= (1 << 2);
     if (event == ui::KeyEvent::Left) btn_mask |= (1 << 3);
     if (event == ui::KeyEvent::Right) btn_mask |= (1 << 4);
+    // User requested B6. We map it to KeyEvent::DFU if available.
+    if (event == ui::KeyEvent::DFU) btn_mask |= (1 << 5);
 
     send_button_state(btn_mask);
     return true;
@@ -166,6 +186,24 @@ void PandoraAppView::read_next_chunk() {
 }
 
 
+void PandoraAppView::poll_rf_config() {
+    uint8_t cmd[2] = {
+        static_cast<uint8_t>(PANDORA_DISPLAY_RF_CONFIG_COMMAND & 0xFF),
+        static_cast<uint8_t>(PANDORA_DISPLAY_RF_CONFIG_COMMAND >> 8)};
+    uint8_t response[PANDORA_DISPLAY_RESPONSE_BYTES]{};
+
+    if (ppmod_dev_->i2c_read(cmd, sizeof(cmd), response, sizeof(response))) {
+        uint32_t freq = decode_u32_le(response);
+        uint8_t mode = response[4];
+        if (freq != 0 && freq != current_rf_freq_) {
+            current_rf_freq_ = freq;
+            receiver_model.set_tuning_frequency(current_rf_freq_);
+            transmitter_model.set_tuning_frequency(current_rf_freq_);
+        }
+        current_rf_mode_ = mode;
+    }
+}
+
 void PandoraAppView::process_tx_edges() {
     uint8_t command[2] = {
         static_cast<uint8_t>(PANDORA_DISPLAY_TX_EDGE_COMMAND & 0xFF),
@@ -193,23 +231,16 @@ void PandoraAppView::process_tx_edges() {
 
 
     if (bitstream.length() > 0) {
-        // Stop current baseband (which is set to AM audio for RX)
-        // Found at: firmware/application/receiver_model.cpp:118
-    receiver_model.disable();
-        // Found at: firmware/application/baseband_api.cpp:258
+        // Stop current baseband
+        receiver_model.disable();
         baseband::shutdown();
 
         // Start the OOK baseband for TX
-        // Found at: firmware/application/baseband_api.cpp:111
         baseband::run_image(portapack::spi_flash::image_tag_ook);
 
-        // Found at: firmware/application/transmitter_model.cpp:109
-        transmitter_model.set_target_frequency(433920000); // Default 433.92MHz
-        // Found at: firmware/application/transmitter_model.cpp:143
+        transmitter_model.set_tuning_frequency(current_rf_freq_);
         transmitter_model.set_sampling_rate(2280000);
-        // Found at: firmware/application/transmitter_model.cpp:149
         transmitter_model.set_baseband_bandwidth(1750000);
-        // Found at: firmware/application/transmitter_model.cpp:115
         transmitter_model.enable();
 
         size_t bitstream_length = 0;
@@ -237,7 +268,6 @@ void PandoraAppView::process_tx_edges() {
             shared_bitstream[(bitstream_length + padding - 1) >> 3] = byte;
         }
 
-        // Found at: firmware/application/baseband_api.cpp:288
         baseband::set_ook_data(
             bitstream_length,
             2280000 / (1000000 / symbol_duration_us),
@@ -245,19 +275,10 @@ void PandoraAppView::process_tx_edges() {
             0
         );
 
-        // Wait for transmission to finish then disable.
-        // We use chThdSleepMilliseconds to allow M4 time to process it.
-        // In a proper implementation this would be async.
-        chThdSleepMilliseconds( (bitstream_length * symbol_duration_us) / 1000 + 10 );
-
-        // Found at: firmware/application/transmitter_model.cpp:126
-        transmitter_model.disable();
-        // Found at: firmware/application/baseband_api.cpp:258
-        baseband::shutdown();
-        // Found at: firmware/application/baseband_api.cpp:241
-        baseband::run_image(portapack::spi_flash::image_tag_am_audio);
-        // Found at: firmware/application/receiver_model.cpp:106
-    receiver_model.enable();
+        // Async transmission wait
+        tx_active_ = true;
+        uint32_t wait_ms = (bitstream_length * symbol_duration_us) / 1000 + 10;
+        tx_end_time_ms_ = chVTGetSystemTime() + chTimeMS2I(wait_ms);
     }
 }
 

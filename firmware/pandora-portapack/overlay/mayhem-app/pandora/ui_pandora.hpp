@@ -45,6 +45,11 @@ private:
     bool frame_ready_ = false;
     bool transfer_active_ = false;
 
+    bool tx_active_ = false;
+    uint32_t tx_end_time_ms_ = 0;
+    uint32_t current_rf_freq_ = 433920000;
+    uint8_t current_rf_mode_ = 0; // 0 = idle, 1 = ready, 2 = rx, 3 = tx
+
     MessageHandlerRegistration message_handler_rx_edge {
         Message::ID::SubGhzRawEdge,
         [this](const Message* const p) {
@@ -58,6 +63,7 @@ private:
     void read_next_chunk();
     void process_tx_edges();
     void send_button_state(uint8_t mask);
+    void poll_rf_config();
 };
 
 } // namespace ui::external_app::pandora
