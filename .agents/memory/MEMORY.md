@@ -1,1 +1,0 @@
-- [HackRF scope](hackrf-scope.md) — HackRF is the user's intended RF device; this implementation remains display-only.
