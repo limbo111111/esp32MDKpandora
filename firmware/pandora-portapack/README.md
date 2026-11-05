@@ -13,7 +13,7 @@ This modifies `proc_subghzd.cpp` to forward the raw duration / level of edge eve
 
 Copy the `overlay/mayhem-app/pandora/` folder to `firmware/application/external/pandora` inside your `mayhem-firmware` directory.
 
-Add `pandora` to the `EXTAPPLIST` inside `firmware/application/external/external.cmake`. Make sure you append the `.cpp` file in `EXTCPPSRC`.
+Add `pandora` to the `EXTAPPLIST` inside `firmware/application/external/external.cmake`. Make sure you append the `.cpp` files (`external/pandora/main.cpp` and `external/pandora/ui_pandora.cpp`) in `EXTCPPSRC`.
 
 Run `tools/update_external_tier_ld.py`.
 
