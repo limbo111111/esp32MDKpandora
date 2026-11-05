@@ -1,0 +1,117 @@
+name: Build Portapack and ESP32 Pandora Firmware
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-portapack-pandora:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout Mayhem Firmware
+        uses: actions/checkout@v4
+        with:
+          repository: limbo111111/mayhem-firmware
+          path: mayhem-firmware
+          submodules: recursive
+
+      - name: Cache arm-none-eabi-gcc
+        id: cache-arm-gcc
+        uses: actions/cache@v3
+        with:
+          path: /opt/gcc-arm-none-eabi-10.3-2021.10
+          key: ${{ runner.os }}-gcc-arm-none-eabi-10.3
+          restore-keys: |
+            ${{ runner.os }}-gcc-arm-none-eabi-
+
+      - name: Install ARM GCC Toolchain
+        if: steps.cache-arm-gcc.outputs.cache-hit != 'true'
+        run: |
+          wget -qO- https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2 | sudo tar -xj -C /opt
+
+      - name: Add ARM GCC to PATH
+        run: echo "/opt/gcc-arm-none-eabi-10.3-2021.10/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake python3-pip python3-setuptools python3-wheel ninja-build dfu-util curl wget
+
+      - name: Install python packages for Mayhem
+        run: pip3 install pyyaml construct ecdsa pycryptodome
+
+      - name: Setup Portapack Pandora Overlay
+        run: |
+          cd mayhem-firmware
+          patch -p1 < ../firmware/pandora-portapack/overlay/mayhem-firmware-patches/proc_subghzd.patch
+          cp -r ../firmware/pandora-portapack/overlay/mayhem-app/pandora firmware/application/external/
+          sed -i 's/set(EXTAPPLIST/set(EXTAPPLIST\n\tpandora/' firmware/application/external/external.cmake
+          sed -i 's/set(EXTCPPSRC/set(EXTCPPSRC\n\texternal\/pandora\/main.cpp\n\texternal\/pandora\/ui_pandora.cpp/' firmware/application/external/external.cmake
+          python3 tools/update_external_tier_ld.py
+
+      - name: Build Mayhem Firmware
+        run: |
+          cd mayhem-firmware
+          mkdir build
+          cd build
+          cmake ..
+          make -j$(nproc)
+
+      - name: Build Pandora External App
+        run: |
+          cd mayhem-firmware
+          python3 tools/export_external_apps.py
+
+      - name: Archive Mayhem Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pandora-portapack-artifacts
+          path: |
+            mayhem-firmware/build/firmware/portapack-h4*.bin
+            mayhem-firmware/build/application/external/pandora.ppma
+
+  build-esp32-pandora:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout Mayhem MDK
+        uses: actions/checkout@v4
+        with:
+          repository: portapack-mayhem/mayhem-mdk
+          path: mayhem-mdk
+          submodules: recursive
+
+      - name: Run Install Overlay Script and fix mayhem-mdk bugs
+        run: |
+          cd firmware/pandora-portapack
+          ./install-overlay.sh ../../mayhem-mdk
+
+          # Fix upstream API deprecations for ESP-IDF v5.3.1 compatibility
+          sed -i 's/soc\/gpio_num.h/hal\/gpio_types.h/' ../../mayhem-mdk/src/portapack-external-module/main/ppi2c/i2c_slave_driver.h
+
+          # Fix static string kTag warning that gets thrown as an error
+          sed -i 's/static const char\* kTag = "pandora-display";/static const char\* TAG = "pandora-display";\n#define kTag TAG/g' ../../mayhem-mdk/src/portapack-external-module/main/main.cpp
+
+      - name: Build ESP32 Firmware
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.1
+          target: esp32s3
+          path: mayhem-mdk/src/portapack-external-module
+          command: |
+            touch main/firmware.bin
+            idf.py set-target esp32s3
+            idf.py build
+
+      - name: Archive ESP32 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-pandora-artifacts
+          path: |
+            mayhem-mdk/src/portapack-external-module/build/bootloader/bootloader.bin
+            mayhem-mdk/src/portapack-external-module/build/partition_table/partition-table.bin
+            mayhem-mdk/src/portapack-external-module/build/portapack-external-module.bin

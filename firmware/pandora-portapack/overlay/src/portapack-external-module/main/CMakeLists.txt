@@ -9,8 +9,8 @@ set(component_sources
 )
 set(component_requires
     driver
-    esp_driver_gpio
-    esp_driver_i2c
+
+
     esp_timer
     log
 )
