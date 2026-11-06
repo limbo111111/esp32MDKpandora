@@ -1,3 +1,4 @@
+#include "ch.h"
 #include "ui_pandora.hpp"
 #include "i2cdevmanager.hpp"
 #include "event_m0.hpp"
@@ -39,19 +40,19 @@ PandoraAppView::PandoraAppView(ui::NavigationView& nav) : nav_{nav} {
     // Found at: firmware/application/baseband_api.cpp:241
         baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
     // Found at: firmware/application/receiver_model.cpp:157
-    receiver_model.set_sampling_rate(3072000);
+    portapack::receiver_model.set_sampling_rate(3072000);
     // Found at: firmware/application/receiver_model.cpp:164
-    receiver_model.set_baseband_bandwidth(1750000);
+    portapack::receiver_model.set_baseband_bandwidth(1750000);
     // Found at: firmware/application/baseband_api.cpp:404
-    baseband::set_subghzd_config(0, receiver_model.sampling_rate());
+    baseband::set_subghzd_config(0, portapack::receiver_model.sampling_rate());
     // Found at: firmware/application/receiver_model.cpp:106
-    receiver_model.enable();
+    portapack::receiver_model.enable();
 }
 
 PandoraAppView::~PandoraAppView() {
     EventDispatcher::events_flag_timer = false;
     // Found at: firmware/application/receiver_model.cpp:118
-    receiver_model.disable();
+    portapack::receiver_model.disable();
     // Found at: firmware/application/baseband_api.cpp:258
         baseband::shutdown();
 }
@@ -71,13 +72,13 @@ void PandoraAppView::on_timer() {
     poll_rf_config();
 
     if (tx_active_) {
-        systime_t now = chVTGetSystemTime();
+        systime_t now = chTimeNow();
         // Wait until elapsed
         if ((systime_t)(now - tx_start_time_) >= tx_duration_) {
-            transmitter_model.disable();
+            portapack::transmitter_model.disable();
             baseband::shutdown();
             baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
-            receiver_model.enable();
+            portapack::receiver_model.enable();
             tx_active_ = false;
         }
         return; // Skip framebuffer updates while transmitting to save CPU
@@ -119,7 +120,7 @@ bool PandoraAppView::on_key(const ui::KeyEvent event) {
     if (event == ui::KeyEvent::Left) btn_mask |= (1 << 3);
     if (event == ui::KeyEvent::Right) btn_mask |= (1 << 4);
     // User requested B6. We map it to KeyEvent::DFU if available.
-    if (event == ui::KeyEvent::DFU) btn_mask |= (1 << 5);
+    if (event == ui::KeyEvent::Dfu) btn_mask |= (1 << 5);
 
     send_button_state(btn_mask);
     return true;
@@ -197,8 +198,8 @@ void PandoraAppView::poll_rf_config() {
         uint8_t mode = response[4];
         if (freq != 0 && freq != current_rf_freq_) {
             current_rf_freq_ = freq;
-            receiver_model.set_tuning_frequency(current_rf_freq_);
-            transmitter_model.set_tuning_frequency(current_rf_freq_);
+            portapack::receiver_model.set_target_frequency(current_rf_freq_);
+            portapack::transmitter_model.set_target_frequency(current_rf_freq_);
         }
         current_rf_mode_ = mode;
     }
@@ -232,16 +233,16 @@ void PandoraAppView::process_tx_edges() {
 
     if (bitstream.length() > 0) {
         // Stop current baseband
-        receiver_model.disable();
+        portapack::receiver_model.disable();
         baseband::shutdown();
 
         // Start the OOK baseband for TX
         baseband::run_image(portapack::spi_flash::image_tag_ook);
 
-        transmitter_model.set_tuning_frequency(current_rf_freq_);
-        transmitter_model.set_sampling_rate(2280000);
-        transmitter_model.set_baseband_bandwidth(1750000);
-        transmitter_model.enable();
+        portapack::transmitter_model.set_target_frequency(current_rf_freq_);
+        portapack::transmitter_model.set_sampling_rate(2280000);
+        portapack::transmitter_model.set_baseband_bandwidth(1750000);
+        portapack::transmitter_model.enable();
 
         size_t bitstream_length = 0;
         uint8_t byte = 0;
@@ -278,8 +279,8 @@ void PandoraAppView::process_tx_edges() {
         // Async transmission wait
         tx_active_ = true;
         uint32_t wait_ms = (bitstream_length * symbol_duration_us) / 1000 + 10;
-        tx_start_time_ = chVTGetSystemTime();
-        tx_duration_ = chTimeMS2I(wait_ms);
+        tx_start_time_ = chTimeNow();
+        tx_duration_ = MS2ST(wait_ms);
     }
 }
 
@@ -290,14 +291,14 @@ void PandoraAppView::paint(ui::Painter& painter) {
     painter.draw_string(
         {static_cast<ui::Coord>(rect.left() + 8),
          static_cast<ui::Coord>(rect.top() + 6)},
-        ui::font::fixed_5x8(), ui::Color::light_grey(), background,
+        ui::font::fixed_5x8, ui::Color::light_grey(), background,
         "PANDORA VIEW  /  RF CAPABLE");
 
     if (!is_connected()) {
         painter.draw_string(
             {static_cast<ui::Coord>(rect.left() + 8),
              static_cast<ui::Coord>(rect.top() + 30)},
-            ui::font::fixed_5x8(), ui::Color::red(), background,
+            ui::font::fixed_5x8, ui::Color::red(), background,
             "PPMOD I2C DISCONNECTED");
         return;
     }
@@ -306,18 +307,15 @@ void PandoraAppView::paint(ui::Painter& painter) {
         painter.draw_string(
             {static_cast<ui::Coord>(rect.left() + 8),
              static_cast<ui::Coord>(rect.top() + 30)},
-            ui::font::fixed_5x8(), ui::Color::white(), background,
+            ui::font::fixed_5x8, ui::Color::white(), background,
             "WAITING FOR EMULATOR FRAME");
         return;
     }
 
     constexpr int maxScale = 2;
-    const int scale = std::max(
-        1, std::min({maxScale,
-                     static_cast<int>(rect.width()) /
-                         PANDORA_DISPLAY_VISIBLE_COLUMNS,
-                     (static_cast<int>(rect.height()) - 28) /
-                         PANDORA_DISPLAY_ROWS}));
+    const int widthScale = static_cast<int>(rect.width()) / PANDORA_DISPLAY_VISIBLE_COLUMNS;
+    const int heightScale = (static_cast<int>(rect.height()) - 28) / PANDORA_DISPLAY_ROWS;
+    const int scale = std::max(1, std::min(maxScale, std::min(widthScale, heightScale)));
     const int imageWidth = PANDORA_DISPLAY_VISIBLE_COLUMNS * scale;
     const int imageHeight = PANDORA_DISPLAY_ROWS * scale;
     const int imageX = rect.left() + (rect.width() - imageWidth) / 2;
@@ -343,7 +341,7 @@ void PandoraAppView::paint(ui::Painter& painter) {
         }
 
         for (int yScale = 0; yScale < scale; ++yScale) {
-            painter.draw_pixels(
+            portapack::display.draw_pixels(
                 {static_cast<ui::Coord>(imageX),
                  static_cast<ui::Coord>(imageY + y * scale + yScale),
                  static_cast<ui::Dim>(imageWidth), 1},
@@ -352,7 +350,7 @@ void PandoraAppView::paint(ui::Painter& painter) {
     }
 }
 
-} // namespace ui::external_app::pandora
+
 
 void PandoraAppView::on_rx_edge(const SubGhzRawEdgeMessage& message) {
     if (!is_connected()) return;
@@ -371,3 +369,5 @@ void PandoraAppView::on_rx_edge(const SubGhzRawEdgeMessage& message) {
     uint8_t dummy;
     ppmod_dev_->i2c_read(cmd, sizeof(cmd), &dummy, 0); // Write only
 }
+
+} // namespace ui::external_app::pandora
