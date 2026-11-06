@@ -34,11 +34,9 @@ PandoraAppView::PandoraAppView(ui::NavigationView& nav) : nav_{nav} {
     // Found at: firmware/common/i2cdevmanager.cpp:254
     ppmod_dev_ = (I2cDev_PPmod*)I2CDevManager::get_dev_by_model(I2C_DEVMDL::I2CDECMDL_PPMOD);
 
-    EventDispatcher::events_flag_timer = true;
-
     // Configure RX Baseband Processor for receiving raw edges
     // Found at: firmware/application/baseband_api.cpp:241
-        baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
+        baseband::run_image(portapack::spi_flash::image_tag_subghzd);
     // Found at: firmware/application/receiver_model.cpp:157
     portapack::receiver_model.set_sampling_rate(3072000);
     // Found at: firmware/application/receiver_model.cpp:164
@@ -50,7 +48,6 @@ PandoraAppView::PandoraAppView(ui::NavigationView& nav) : nav_{nav} {
 }
 
 PandoraAppView::~PandoraAppView() {
-    EventDispatcher::events_flag_timer = false;
     // Found at: firmware/application/receiver_model.cpp:118
     portapack::receiver_model.disable();
     // Found at: firmware/application/baseband_api.cpp:258
@@ -77,7 +74,7 @@ void PandoraAppView::on_timer() {
         if ((systime_t)(now - tx_start_time_) >= tx_duration_) {
             portapack::transmitter_model.disable();
             baseband::shutdown();
-            baseband::run_image(portapack::spi_flash::image_tag_subghz_rx);
+            baseband::run_image(portapack::spi_flash::image_tag_subghzd);
             portapack::receiver_model.enable();
             tx_active_ = false;
         }
@@ -329,8 +326,8 @@ void PandoraAppView::paint(ui::Painter& painter) {
                PANDORA_DISPLAY_VISIBLE_COLUMNS * maxScale>
         line{};
 
-    for (int y = 0; y < PANDORA_DISPLAY_ROWS; ++y) {
-        for (int x = 0; x < PANDORA_DISPLAY_VISIBLE_COLUMNS; ++x) {
+    for (unsigned int y = 0; y < PANDORA_DISPLAY_ROWS; ++y) {
+        for (unsigned int x = 0; x < PANDORA_DISPLAY_VISIBLE_COLUMNS; ++x) {
             const uint8_t packed =
                 frame_[(y / 4) * PANDORA_DISPLAY_COLUMNS + x];
             const uint8_t level =
