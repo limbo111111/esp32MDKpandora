@@ -63,7 +63,7 @@ jobs:
       - name: Build Pandora External App
         run: |
           cd mayhem-firmware
-          python3 tools/export_external_apps.py
+          python3 firmware/tools/export_external_apps.py
 
       - name: Archive Mayhem Artifacts
         uses: actions/upload-artifact@v4
