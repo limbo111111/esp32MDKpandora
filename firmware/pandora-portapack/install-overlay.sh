@@ -62,6 +62,11 @@ cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/display_test_pattern.
 cp "$SCRIPT_DIR/protocol/pandora_display_protocol.h" \
     "$MAYHEM_DIR/src/common/pandora_display_protocol.h"
 
+if [[ -f "$SCRIPT_DIR/overlay/src/portapack-external-module/main/firmware.bin" ]]; then
+    cp "$SCRIPT_DIR/overlay/src/portapack-external-module/main/firmware.bin" \
+        "$MAYHEM_DIR/src/portapack-external-module/main/firmware.bin"
+fi
+
 cp "$SCRIPT_DIR/upstream/main/emulator.c" \
     "$MAYHEM_DIR/src/portapack-external-module/main/pandora/emulator.c"
 cp "$SCRIPT_DIR/upstream/main/emulator.h" \
