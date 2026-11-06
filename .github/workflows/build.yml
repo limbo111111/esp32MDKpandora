@@ -98,7 +98,6 @@ jobs:
           target: esp32s3
           path: mayhem-mdk/src/portapack-external-module
           command: |
-            touch main/firmware.bin
             idf.py set-target esp32s3
             idf.py build
 
