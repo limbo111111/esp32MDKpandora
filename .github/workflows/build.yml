@@ -65,8 +65,9 @@ jobs:
         with:
           name: pandora-portapack-artifacts
           path: |
-            mayhem-firmware/build/firmware/portapack-h4*.bin
-            mayhem-firmware/build/application/external/pandora.ppma
+            mayhem-firmware/build/firmware/portapack-mayhem_*.ppfw.tar
+            mayhem-firmware/build/firmware/portapack-mayhem-firmware.bin
+            mayhem-firmware/build/firmware/application/pandora.ppma
 
   build-esp32-pandora:
     runs-on: ubuntu-22.04
